@@ -1,4 +1,27 @@
-const socket = io();
+let isOffline = false;
+let socket = {
+    on: () => {},
+    emit: (event) => {
+        if (isOffline) {
+            showToast('<i class="ph ph-warning-circle"></i> Ошибка: Нет подключения к серверу. Убедитесь, что сервер Node.js запущен (node server.js).');
+            if (event === 'start_search') {
+               // Remove skeletons if search fails immediately
+               document.querySelectorAll('.skeleton').forEach(el => el.remove());
+               showEmptyState(0);
+            }
+        }
+    }
+};
+try {
+    if (typeof io !== 'undefined') {
+        socket = io();
+    } else {
+        isOffline = true;
+    }
+} catch (e) {
+    isOffline = true;
+    console.warn("Socket.io not available, running in offline mode.");
+}
 let selected = new Map();
 let allCardsData = [];
 let currentModalUrl = '';
@@ -545,6 +568,7 @@ function applyLocalFilters() {
         }
     });
     document.getElementById('visibleCount').innerText = visibleCount;
+    showEmptyState(visibleCount);
 }
 
 function toggle(e, url, title, uploader) {
@@ -950,13 +974,41 @@ function sendAdminCommand(cmd) {
 }
 
 
-function showEmptyState() {
+function showEmptyState(visibleCount = 0) {
     const grid = document.getElementById('grid');
-    grid.innerHTML = `
-        <div class="empty-state">
+    if (!grid) return;
+
+    // Check if there are no items in allCardsData or visibleCount is 0
+    if (allCardsData.length === 0) {
+        let emptyState = document.getElementById('emptyState');
+        if (!emptyState) {
+            emptyState = document.createElement('div');
+            emptyState.className = 'empty-state';
+            emptyState.id = 'emptyState';
+            grid.appendChild(emptyState);
+        }
+        emptyState.innerHTML = `
             <i class="ph ph-magnifying-glass"></i>
             <h3>Начните поиск</h3>
             <p>Введите запрос или вставьте ссылку для поиска видео.</p>
-        </div>
-    `;
+        `;
+        emptyState.style.display = 'flex';
+    } else if (visibleCount === 0) {
+        let emptyState = document.getElementById('emptyState');
+        if (!emptyState) {
+            emptyState = document.createElement('div');
+            emptyState.className = 'empty-state';
+            emptyState.id = 'emptyState';
+            grid.appendChild(emptyState);
+        }
+        emptyState.innerHTML = `
+            <i class="ph ph-magnifying-glass"></i>
+            <h3>Ничего не найдено</h3>
+            <p>Воспользуйтесь поиском, чтобы найти видео или аудио для скачивания</p>
+        `;
+        emptyState.style.display = 'flex';
+    } else {
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) emptyState.style.display = 'none';
+    }
 }

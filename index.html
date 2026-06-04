@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="./style.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -98,7 +98,13 @@
             <button class="btn" onclick="cancelSelect()" style="background:transparent; color:var(--text-muted);">Сбросить</button>
         </div>
 
-        <div class="grid" id="grid"></div>
+        <div class="grid" id="grid">
+    <div class="empty-state" id="emptyState">
+        <i class="ph ph-magnifying-glass"></i>
+        <h3>Начните поиск</h3>
+        <p>Введите запрос или вставьте ссылку для поиска видео.</p>
+    </div>
+</div>
         <div id="loadMoreBtn" class="btn btn-dark" onclick="loadMore()">Загрузить следующие...</div>
         <div id="lassoBox"></div>
 
@@ -261,6 +267,6 @@
         </div>
     </div>
 
-    <script src="/main.js"></script>
+    <script src="./main.js"></script>
 </body>
 </html>
