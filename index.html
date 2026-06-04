@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Media Hub 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-tabs">
+        <button class="app-tab active" id="tabBtn-main" onclick="switchAppTab('main')"><i class="ph ph-magnifying-glass"></i> Поиск и Загрузки</button>
+        <button class="app-tab" id="tabBtn-admin" onclick="switchAppTab('admin')"><i class="ph ph-gear"></i> Админ Панель</button>
+        <button class="app-tab" id="themeToggleBtn" onclick="toggleTheme()" style="margin-left:auto;"><i class="ph ph-moon"></i> Темная тема</button>
+    </div>
+
+    <div id="appMain">
+        <div class="header">
+            <div class="search-tabs">
+                <button class="search-tab active" id="tabSearch" onclick="switchSearchTab('search')">Поиск (Текст / Теги)</button>
+                <button class="search-tab" id="tabLink" onclick="switchSearchTab('link')">Прямая ссылка</button>
+            </div>
+            <div class="search-row">
+                <button class="btn btn-gray" id="pasteBtn" onclick="pasteFromClipboard()" style="display:none; padding: 10px 15px; font-size: 18px;" title="Вставить из буфера обмена"><i class="ph ph-clipboard-text"></i></button>
+                <input type="text" id="query" placeholder="Введите текст или хештег для поиска..." oninput="checkAutoStart(this.value)" onkeydown="if(event.key==='Enter') startSearch()">
+                <button class="btn btn-red" id="mainSearchBtn" onclick="startSearch()">Искать</button>
+                <button class="btn" id="turboBtn" onclick="turboDownload()" style="background:#f59e0b; color:white; border:none;" title="Скачать в 1 клик (ссылка из буфера)"><i class="ph ph-lightning"></i> Турбо</button>
+                <button class="btn btn-gray" onclick="selectAll()" id="selAllBtn" style="display:none">Выбрать видимые</button>
+                <button class="btn btn-dark" onclick="openBlacklistModal()" style="margin-left:auto;"><i class="ph ph-prohibit"></i> Управление ЧС</button>
+                <button class="btn btn-dark" onclick="openCookieModal()" style="margin-left:10px;"><i class="ph ph-cookie"></i> Настройки Cookies</button>
+            </div>
+
+            <div class="lvl1-controls">
+                <span style="font-weight: 600; font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-right: 10px;">Парсер:</span>
+                <div class="ctrl-group">
+                    <label>Сортировка:</label>
+                    <select id="lvl1Sort" onchange="startSearch()">
+                        <option value="newest">Сначала свежие</option>
+                        <option value="relevance">По релевантности</option>
+                    </select>
+                </div>
+                <div class="ctrl-group">
+                    <label>Длительность:</label>
+                    <select id="lvl1Duration" onchange="startSearch()">
+                        <option value="all">Любая</option>
+                        <option value="shorts">Только Shorts (< 1 мин)</option>
+                        <option value="3m">До 3 минут</option>
+                        <option value="5m">До 5 минут</option>
+                        <option value="10m">До 10 минут</option>
+                        <option value="long">Длинные (> 1 мин)</option>
+                    </select>
+                </div>
+                <div class="ctrl-group">
+                    <label>Формат (Сервер):</label>
+                    <label><input type="checkbox" id="fmtVert" checked onchange="handleFormatChange(this)"> Верт.</label>
+                    <label><input type="checkbox" id="fmtHorz" checked onchange="handleFormatChange(this)"> Гориз.</label>
+                </div>
+                <div class="ctrl-group">
+                    <label>Лимит вывода:</label>
+                    <input type="number" id="lvl1Limit" value="50" min="1" max="1000" onchange="startSearch()">
+                </div>
+                <div class="ctrl-group" style="margin-left: 15px; border-left: 1px solid var(--border); padding-left: 15px;">
+                    <label><input type="checkbox" id="ignoreBl" onchange="startSearch()"> Игнорировать ЧС при поиске</label>
+                </div>
+            </div>
+
+            <div class="local-search-bar" id="localSearchBar" style="display: none;">
+                <input type="text" id="localSearchInput" class="live-search" placeholder="Локальный фильтр (Пример: кот -собака @Усачев -#ai)" oninput="applyLocalFilters()">
+                <span class="local-search-hint">Отображается: <span id="visibleCount">0</span></span>
+            </div>
+        </div>
+
+        <div id="massPanel" class="mass-panel">
+            <span id="counter" style="font-weight:600">Выбрано: 0</span>
+            <select id="quality" class="btn" style="padding: 8px;">
+                <option value="max">Максимальное</option>
+                <option value="1080">1080p</option>
+                <option value="720">720p</option>
+                <option value="mp3">MP3 Аудио</option>
+            </select>
+
+            <button class="btn btn-red" onclick="addToQueue(false)">Скачать</button>
+            <button class="btn btn-dark" onclick="addToQueue(true)" style="border: 1px solid var(--border);">Скачать как ZIP</button>
+
+            <div style="display:flex; gap:15px; margin-left: 10px; border-left: 1px solid var(--border); padding-left: 15px;">
+                <label style="font-size: 13px; display:flex; align-items:center; gap:5px; cursor:pointer;" title="Скачать обложку и текстовое описание (Архивом)">
+                    <input type="checkbox" id="cbContentPack"> <i class="ph ph-package"></i> Content Pack
+                </label>
+                <label style="font-size: 13px; display:flex; align-items:center; gap:5px; cursor:pointer;" title="Автоматически вырезать рекламные интеграции">
+                    <input type="checkbox" id="cbSponsorBlock"> <i class="ph ph-scissors"></i> Вырезать рекламу
+                </label>
+            </div>
+
+            <button class="btn btn-gray" onclick="massAddToBlacklist()" style="margin-left:auto;"><i class="ph ph-prohibit"></i> Добавить каналы в ЧС</button>
+            <button class="btn" onclick="cancelSelect()" style="background:transparent; color:var(--text-muted);">Сбросить</button>
+        </div>
+
+        <div class="grid" id="grid"></div>
+        <div id="loadMoreBtn" class="btn btn-dark" onclick="loadMore()">Загрузить следующие...</div>
+        <div id="lassoBox"></div>
+
+        <div id="customContextMenu" class="context-menu">
+            <div class="cm-item" onclick="cmActionDownload()"><i class="ph ph-download-simple"></i> Скачать</div>
+            <div class="cm-item" id="cmToggleBtn" onclick="cmActionToggle()"><i class="ph ph-check-circle"></i> Выделить</div>
+            <div class="cm-item" onclick="selectAll()"><i class="ph ph-check-square"></i> Выделить все</div>
+            <div class="cm-item" onclick="cmActionCopyDesc()"><i class="ph ph-copy"></i> Копировать описание</div>
+        </div>
+
+        <div class="queue-panel collapsed" id="queuePanel">
+            <div class="q-header" onclick="toggleQueuePanel()" title="Свернуть/Развернуть">
+                <div>
+                    <span id="qToggleIcon">🔼</span> Загрузки: <span id="qStats" style="margin-left: 8px; font-weight: normal;"><i class="ph ph-hourglass"></i> 0 | <i class="ph ph-check"></i> 0 | <i class="ph ph-x"></i> 0</span>
+                </div>
+            </div>
+            <div class="q-toolbar">
+                <button class="btn-sm" id="btnPauseAll" onclick="pauseAll()" title="Остановить всю очередь"><i class="ph ph-pause"></i> Пауза всем</button>
+                <button class="btn-sm" id="btnStartAll" onclick="resumeAll()" title="Запустить всю очередь" style="display:none; background:var(--success); color:white; border-color:var(--success);"><i class="ph ph-play"></i> Старт всем</button>
+                <button class="btn-sm" id="btnConfirmAll" onclick="confirmAllDuplicates()" title="Подтвердить все дубликаты" style="display:none; background:#facc15; border-color:#eab308; color:#854d0e; font-weight:bold;"><i class="ph ph-warning"></i> Подтвердить повторы</button>
+                <button class="btn-sm" onclick="retryAllErrors()" title="Повторить все файлы с ошибками"><i class="ph ph-arrows-clockwise"></i> Ошибки</button>
+                <button class="btn-sm" onclick="clearSuccessQueue()" title="Очистить успешно завершенные"><i class="ph ph-broom"></i> Готовые</button>
+                <button class="btn-sm btn-danger-sm" onclick="clearAllQueue()" title="Очистить весь список загрузок" style="margin-left:auto;"><i class="ph ph-trash"></i> Всё</button>
+            </div>
+            <div class="q-list" id="queueList"></div>
+        </div>
+
+        <div id="modalOverlay" class="modal-overlay" onclick="closeModal(event)">
+            <span class="modal-close" onclick="closeModal(null)">&times;</span>
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div id="modalLayout" class="modal-layout">
+                    <div class="player-container" id="playerTarget"></div>
+                    <div class="modal-info">
+                        <div class="modal-title" id="mTitle"></div>
+                        <div class="modal-uploader-row">
+                            <div class="modal-uploader" id="mUploader"></div>
+                            <button class="btn btn-gray ban-btn" onclick="banCurrentChannel()"><i class="ph ph-prohibit"></i> Заблокировать канал</button>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn btn-gray btn-icon-copy" onclick="copyModalText(this)" title="Копировать текст">📋</button>
+                            <select id="modalQuality" class="btn">
+                                <option value="max">Макс. качество</option>
+                                <option value="1080">1080p</option>
+                                <option value="720">720p</option>
+                                <option value="mp3">MP3</option>
+                            </select>
+                            <button class="btn btn-red" onclick="downloadFromModal()">Скачать</button>
+                        </div>
+
+                        <div style="display:flex; gap:15px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <label style="font-size: 13px; display:flex; align-items:center; gap:5px; cursor:pointer;" title="Скачать обложку и текстовое описание">
+                                <input type="checkbox" id="modalCbContentPack"> 📦 Content Pack
+                            </label>
+                            <label style="font-size: 13px; display:flex; align-items:center; gap:5px; cursor:pointer;" title="Автоматически вырезать рекламные интеграции">
+                                <input type="checkbox" id="modalCbSponsorBlock"> ✂️ Вырезать рекламу
+                            </label>
+                        </div>
+
+                        <div class="modal-desc" id="mDesc"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="blModal" class="modal-overlay" onclick="closeBlacklistModal(event)">
+            <div class="modal-content bl-modal" onclick="event.stopPropagation()">
+                <div class="bl-header">
+                    <h2><i class="ph ph-prohibit"></i> База Черного Списка</h2>
+                    <span class="modal-close bl-close" onclick="closeBlacklistModal()">&times;</span>
+                </div>
+
+                <div class="bl-toolbar">
+                    <input type="text" id="blSearch" class="live-search" placeholder="<i class="ph ph-magnifying-glass"></i> Поиск по базе ЧС..." oninput="renderBlacklistUI()">
+                    <div class="bl-tabs">
+                        <button class="chip active" data-tab="all" onclick="setBlTab('all', this)">Все</button>
+                        <button class="chip" data-tab="channel" onclick="setBlTab('channel', this)">Каналы</button>
+                        <button class="chip" data-tab="tag" onclick="setBlTab('tag', this)">Хештеги</button>
+                        <button class="chip" data-tab="word" onclick="setBlTab('word', this)">Слова</button>
+                    </div>
+                </div>
+
+                <div class="bl-list" id="blListContainer"></div>
+
+                <div class="bl-add-form">
+                    <select id="blNewType" class="btn">
+                        <option value="channel">Канал</option>
+                        <option value="tag">Хештег</option>
+                        <option value="word">Слово</option>
+                    </select>
+                    <input type="text" id="blNewValue" class="live-search" placeholder="Значение (без @ и #)">
+                    <input type="text" id="blNewComment" class="live-search" placeholder="Заметка (почему в ЧС?)">
+                    <button class="btn btn-dark" onclick="addRuleToBlacklist()">Добавить</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="cookieModal" class="modal-overlay" onclick="closeCookieModal(event)">
+            <div class="modal-content bl-modal" style="height: auto; max-height: 80vh;" onclick="event.stopPropagation()">
+                <div class="bl-header">
+                    <h2><i class="ph ph-cookie"></i> Настройка защиты (Cookies)</h2>
+                    <span class="modal-close bl-close" onclick="closeCookieModal()">&times;</span>
+                </div>
+                <div style="padding: 25px; font-size: 15px; line-height: 1.6; overflow-y: auto;">
+                    <p style="margin-top:0;">Для обхода <b>HTTP Error 403 (YouTube)</b> и <b>IP Block (TikTok)</b> необходимо предоставить парсеру сессию вашего браузера.</p>
+                    <ol style="margin-left: 20px; margin-bottom: 20px; font-weight: 500;">
+                        <li style="margin-bottom: 10px;">Установите расширение <b style="color:var(--primary);">Get cookies.txt LOCALLY</b> в ваш браузер.</li>
+                        <li style="margin-bottom: 10px;">Авторизуйтесь на сайте <a href="https://www.youtube.com" target="_blank" style="color: #065fd4;">youtube.com</a> или <a href="https://www.tiktok.com" target="_blank" style="color: #065fd4;">tiktok.com</a>.</li>
+                        <li style="margin-bottom: 10px;">Находясь на вкладке нужного сайта, нажмите на иконку расширения и скачайте файл.</li>
+                        <li style="margin-bottom: 10px;">Переименуйте файл строго в <b style="background:var(--hover-bg); padding:2px 6px; border-radius:4px;">youtube_cookies.txt</b> или <b style="background:var(--hover-bg); padding:2px 6px; border-radius:4px;">tiktok_cookies.txt</b></li>
+                        <li style="margin-bottom: 10px;">Поместите этот файл в корневую папку проекта. Сервер подхватит его автоматически.</li>
+                    </ol>
+                    <p style="color: var(--text-muted); font-size: 13px; background: var(--panel-bg); padding: 15px; border-left: 3px solid var(--border);">
+                        <i>Если скачивание снова начнет выдавать ошибки, значит срок действия куки истек — удалите старый файл и повторите процесс.</i>
+                    </p>
+                    <button class="btn btn-dark" style="width: 100%; margin-top: 10px;" onclick="closeCookieModal()">Понятно, закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="appAdmin" style="display:none; padding: 20px;">
+        <div class="admin-container">
+            <h1 style="text-align: center; margin-bottom: 40px; font-size: 28px;"><i class="ph ph-gear"></i> Media Hub Control Panel</h1>
+
+            <div class="section">
+                <div class="section-title">Серверное Управление</div>
+                <div class="grid-admin" style="grid-template-columns: repeat(3, 1fr);">
+                    <button class="btn btn-dark" onclick="sendAdminCommand('server-restart')"><i class="ph ph-arrows-clockwise"></i> Перезапуск Сервера</button>
+                    <button class="btn btn-danger" onclick="sendAdminCommand('server-stop')"><i class="ph ph-stop"></i> Выключить Сервер</button>
+                    <div class="statusBox status-on" style="background: rgba(16, 185, 129, 0.1);"><i class="ph ph-info"></i> Сервер: Работает</div>
+                </div>
+
+                <div class="section-title" style="margin-top: 30px;">Системные Утилиты</div>
+                <div class="grid-admin" style="grid-template-columns: repeat(2, 1fr);">
+                    <button class="btn btn-dark" onclick="sendAdminCommand('open-folder')"><i class="ph ph-folder-open"></i> Открыть папку загрузок</button>
+                    <button class="btn btn-zapret" onclick="sendAdminCommand('zapret')"><i class="ph ph-shield-check"></i> Запуск Запрет (Anti-DPI)</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Данные и Обслуживание</div>
+                <div class="grid-admin" style="grid-template-columns: repeat(3, 1fr);">
+                    <button class="btn btn-danger" onclick="sendAdminCommand('clear-temp')"><i class="ph ph-trash"></i> Очистить Temp (Временные файлы)</button>
+                    <button class="btn btn-danger" onclick="sendAdminCommand('clear-logs')"><i class="ph ph-trash"></i> Очистить логи (.log файлы)</button>
+                    <button class="btn btn-success" onclick="sendAdminCommand('update-ytdlp')"><i class="ph ph-download-simple"></i> Обновить yt-dlp</button>
+                </div>
+            </div>
+
+            <div class="log-header">
+                <div style="width: 100%;"></div>
+                <button class="btn btn-gray" onclick="sendAdminCommand('clear-console')"><i class="ph ph-broom"></i> Очистить консоль логов</button>
+            </div>
+
+            <div class="log-grid" style="grid-template-columns: 1fr;">
+                <div>
+                    <div class="log-title">Лог основного сервера:</div>
+                    <div id="logBox" class="log-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/main.js"></script>
+</body>
+</html>
