@@ -6,7 +6,50 @@ const historyPath = path.join(__dirname, 'history.log');
 const blTxtPath = path.join(__dirname, 'blacklist.txt');
 const blJsonPath = path.join(__dirname, 'blacklist.json');
 
-// --- АВТОМАТИЧЕСКАЯ УСТАНОВКА FFMPEG ---
+// --- АВТОМАТИЧЕСКАЯ УСТАНОВКА ЗАВИСИМОСТЕЙ ---
+async function checkAndDownloadBinaries() {
+    const axios = require('axios');
+    const fsPromises = require('fs').promises;
+
+    console.log('\n[SYSTEM] Проверка наличия yt-dlp...');
+    const ytdlpName = process.platform === 'win32' ? 'yt-dlp.exe' : (process.platform === 'darwin' ? 'yt-dlp_macos' : 'yt-dlp');
+    const ytdlpPath = path.join(__dirname, ytdlpName);
+
+    if (!fs.existsSync(ytdlpPath)) {
+        console.log('[SYSTEM] yt-dlp не найден. Начинаю загрузку...');
+        let url = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+        if (process.platform === 'win32') url = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+        if (process.platform === 'darwin') url = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
+
+        try {
+            const response = await axios({
+                url,
+                method: 'GET',
+                responseType: 'stream'
+            });
+
+            const writer = fs.createWriteStream(ytdlpPath);
+            response.data.pipe(writer);
+
+            await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+            });
+
+            if (process.platform !== 'win32') {
+                fs.chmodSync(ytdlpPath, 0o755);
+            }
+            console.log('[SYSTEM] yt-dlp успешно загружен!');
+        } catch (error) {
+            console.error('[ERROR] Ошибка загрузки yt-dlp:', error.message);
+        }
+    } else {
+        console.log('[SYSTEM] yt-dlp найден.');
+    }
+
+    checkAndDownloadFFmpeg();
+}
+
 function checkAndDownloadFFmpeg() {
     console.log('\n[SYSTEM] Проверка наличия FFmpeg и FFprobe...');
     const ffmpegExists = fs.existsSync(path.join(__dirname, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')) || fs.existsSync('/usr/bin/ffmpeg') || fs.existsSync('/usr/local/bin/ffmpeg');
@@ -106,4 +149,4 @@ function isBlacklisted(itemJson, blacklistArr) {
     return false;
 }
 
-module.exports = { writeToHistory, getBlacklist, saveBlacklist, isBlacklisted, checkAndDownloadFFmpeg };
+module.exports = { writeToHistory, getBlacklist, saveBlacklist, isBlacklisted, checkAndDownloadFFmpeg, checkAndDownloadBinaries };

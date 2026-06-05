@@ -34,12 +34,15 @@ const archiver = require('archiver');
 const http = require('http');
 const socketIo = require('socket.io');
 const utils = require('./utils');
+const ytDlpName = process.platform === 'win32' ? 'yt-dlp.exe' : (process.platform === 'darwin' ? 'yt-dlp_macos' : 'yt-dlp');
+const ytDlpPath = path.join(__dirname, ytDlpName);
+
 // Подключение изолированных парсеров по платформам
 const youtubeParser = require('./queryParser');
 const socialParser = require('./socialParser');
 const marketplaceParser = require('./marketplaceParser');
 
-utils.checkAndDownloadFFmpeg();
+
 // --- ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ ОШИБОК ПРОЦЕССА ---
 process.on('uncaughtException', (err) => {
     console.log(`[FATAL ERROR] Неперехваченное исключение: ${err.message}`);
@@ -170,7 +173,7 @@ function processQueue() {
 
     args.push(task.url);
 
-    activeProcess = spawn(process.platform === 'win32' ? '.\\yt-dlp.exe' : 'yt-dlp', args, { env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } });
+    activeProcess = spawn(ytDlpPath, args, { env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } });
     task.processRef = activeProcess;
 
     activeProcess.stdout.setEncoding('utf8');
@@ -304,18 +307,23 @@ app.get('/api/full-info', async (req, res) => {
         args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     }
     args.push(url);
-    const yt = spawn(process.platform === 'win32' ? '.\\yt-dlp.exe' : 'yt-dlp', args, { env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } });
+    const yt = spawn(ytDlpPath, args, { env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } });
     yt.stdout.setEncoding('utf8');
     let buffer = '';
     yt.stdout.on('data', d => buffer += d);
-    yt.on('close', async () => {
+    yt.on('close', async (code) => {
+        if (code !== 0) {
+            console.error(`[ERROR] yt-dlp завершился с кодом ${code} для URL: ${url}`);
+            return res.status(500).json({ error: true, message: 'yt-dlp error' });
+        }
         try {
             const parsed = JSON.parse(buffer);
             cache[url] = parsed;
             await safeWriteFile(cachePath, cache);
             res.json(parsed);
         } catch (e) {
-            res.status(500).json({ error: true });
+            console.error(`[ERROR] Ошибка парсинга JSON для URL: ${url}. Ошибка: ${e.message}`);
+            res.status(500).json({ error: true, message: 'JSON parse error' });
         }
     });
 });
@@ -587,7 +595,7 @@ io.on('connection', (socket) => {
                 ctx = youtubeParser.parse(data);
             }
 
-            const yt = spawn(process.platform === 'win32' ? '.\\yt-dlp.exe' : 'yt-dlp', ctx.ytDlpArgs, { env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } });
+            const yt = spawn(ytDlpPath, ctx.ytDlpArgs, { env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } });
             yt.stdout.setEncoding('utf8');
 
             // ИСПРАВЛЕНО: Буферизация потока для бесконфликтной обработки длинных JSON-выгрузок длинных видео
@@ -622,6 +630,14 @@ io.on('connection', (socket) => {
 });
 
 const PORT = 3000;
-server.listen(PORT, () => {
-    console.log(`[SYSTEM] Сервер запущен на http://localhost:${PORT}`);
+
+
+
+utils.checkAndDownloadBinaries().then(() => {
+    server.listen(PORT, () => {
+        console.log(`[SYSTEM] Сервер запущен на http://localhost:${PORT}`);
+    });
+}).catch(err => {
+    console.error("[FATAL ERROR] Не удалось загрузить зависимости: ", err);
+    process.exit(1);
 });
