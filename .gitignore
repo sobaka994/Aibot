@@ -1,2 +1,6 @@
 node_modules/
 desc_cache.json\ndownload_history.json\nyt-dlp*\nffmpeg*
+core_os/target/
+.rustup
+iso_root/
+*.img
