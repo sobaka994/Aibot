@@ -193,37 +193,24 @@ impl<'a> PanaceaUtility<'a> {
 fn main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap();
 
-    // Create a block to scope the borrow of `system_table.boot_services()`
-    let (width, height, stride, fb_ptr) = {
-        let bs = system_table.boot_services();
-        bs.set_watchdog_timer(0, 0x10000, None).unwrap();
+    // Создаем независимую копию системной таблицы для работы в цикле,
+    // чтобы safe Rust не блокировал нам доступ к Boot Services
+    let mut system_table_copy = unsafe { system_table.unsafe_clone() };
 
-        let mut fb_ptr = core::ptr::null_mut();
-        let mut width = 0;
-        let mut height = 0;
-        let mut stride = 0;
+    let bs = system_table.boot_services();
+    bs.set_watchdog_timer(0, 0x10000, None).unwrap();
 
-        if let Ok(gop_handle) = bs.get_handle_for_protocol::<GraphicsOutput>() {
-            if let Ok(mut gop) = bs.open_protocol_exclusive::<GraphicsOutput>(gop_handle) {
-                if let Some(mode) = gop.modes().max_by_key(|m| m.info().resolution().0 * m.info().resolution().1) {
-                    let _ = gop.set_mode(&mode);
+    // Открываем графику и держим её ЖИВОЙ до конца работы системы
+    let gop_handle = bs.get_handle_for_protocol::<GraphicsOutput>().unwrap();
+    let mut gop = bs.open_protocol_exclusive::<GraphicsOutput>(gop_handle).unwrap();
 
-                    let res = mode.info().resolution();
-                    width = res.0;
-                    height = res.1;
-                    stride = mode.info().stride();
+    let mode = gop.modes().max_by_key(|m| m.info().resolution().0 * m.info().resolution().1).unwrap();
+    gop.set_mode(&mode).unwrap();
 
-                    let mut fb = gop.frame_buffer();
-                    fb_ptr = fb.as_mut_ptr() as *mut u32;
-                }
-            }
-        }
-        (width, height, stride, fb_ptr)
-    };
-
-    if fb_ptr.is_null() {
-        loop { core::hint::spin_loop(); }
-    }
+    let (width, height) = mode.info().resolution();
+    let stride = mode.info().stride();
+    let mut fb = gop.frame_buffer();
+    let fb_ptr = fb.as_mut_ptr() as *mut u32;
 
     let mut writer = FramebufferWriter::new(fb_ptr, width, height, stride);
     writer.clear_screen();
@@ -235,33 +222,37 @@ fn main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     writer.draw_str("");
     writer.draw_str(loc.get_string("press_key"));
 
+    // Теперь используем изолированную копию таблицы для опроса ввода
     loop {
-        let stdin = system_table.stdin();
+        let stdin = system_table_copy.stdin();
         if let Ok(Some(key)) = stdin.read_key() {
             use uefi::proto::console::text::Key;
             if let Key::Printable(k) = key {
-                let ch = char::from(k);
-                if ch == 'l' || ch == 'L' {
-                    loc.toggle();
-                    writer.clear_screen();
-                    writer.draw_str(loc.get_string("os_name"));
-                    writer.draw_str(loc.get_string("util_name"));
-                    writer.draw_str("");
-                    writer.draw_str(loc.get_string("press_key"));
-                } else if ch == 'd' || ch == 'D' {
-                    writer.clear_screen();
-                    writer.draw_str(loc.get_string("os_name"));
-                    writer.draw_str(loc.get_string("util_name"));
-                    writer.draw_str("");
-                    let mut panacea = PanaceaUtility::new(&loc, &mut writer);
-                    panacea.run_all();
-                    writer.draw_str("");
-                    writer.draw_str(loc.get_string("press_key"));
+                // To avoid panic with invalid surrogates via char::from on Char16:
+                let ch_u16 = u16::from(k);
+                if let Some(ch) = char::from_u32(ch_u16 as u32) {
+                    if ch == 'l' || ch == 'L' {
+                        loc.toggle();
+                        writer.clear_screen();
+                        writer.draw_str(loc.get_string("os_name"));
+                        writer.draw_str(loc.get_string("util_name"));
+                        writer.draw_str("");
+                        writer.draw_str(loc.get_string("press_key"));
+                    } else if ch == 'd' || ch == 'D' {
+                        writer.clear_screen();
+                        writer.draw_str(loc.get_string("os_name"));
+                        writer.draw_str(loc.get_string("util_name"));
+                        writer.draw_str("");
+                        let mut panacea = PanaceaUtility::new(&loc, &mut writer);
+                        panacea.run_all();
+                        writer.draw_str("");
+                        writer.draw_str(loc.get_string("press_key"));
+                    }
                 }
             }
         } else {
-            // Need to borrow boot services again to use stall
-            system_table.boot_services().stall(10000);
+            // Используем boot_services из копии таблицы, оригинальный bs не трогаем
+            system_table_copy.boot_services().stall(10000);
         }
     }
 }
