@@ -1,13 +1,18 @@
 const socket = io();
-let baseTunnelUrl = window.location.origin;
+let localUrl = window.location.origin;
+let publicUrl = '';
 
 socket.on('connect', () => {
     socket.emit('admin_join', { token: window.ADMIN_TOKEN });
 });
 
 socket.on('admin_sync', (data) => {
-    baseTunnelUrl = data.tunnelUrl;
-    document.getElementById('currentUrlText').innerText = data.tunnelUrl;
+    localUrl = `http://${data.localIP}:${data.port}`;
+    publicUrl = data.publicIP !== 'Неизвестен' && data.publicIP !== 'Определяется...' ? `http://${data.publicIP}:${data.port}` : null;
+
+    document.getElementById('localIpText').innerText = localUrl;
+    document.getElementById('publicIpText').innerText = publicUrl || 'Не удалось определить внешний IP';
+
     renderSessions(data.sessions);
 });
 
@@ -29,11 +34,6 @@ socket.on('transfer_update', (data) => {
     }
 });
 
-function startTunnel() {
-    const sub = document.getElementById('subdomain').value.trim();
-    socket.emit('start_tunnel', { subdomain: sub || undefined, token: window.ADMIN_TOKEN });
-}
-
 function createLink() {
     let linkId = document.getElementById('linkId').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -45,7 +45,7 @@ function createLink() {
     socket.emit('create_link', { linkId, password, savePath, token: window.ADMIN_TOKEN }, (response) => {
         if (response.error) alert(response.error);
         else {
-            alert(`Ссылка создана!\nURL: ${baseTunnelUrl}/t/${response.linkId}`);
+            alert(`Сессия создана!\nПередайте клиенту ссылку.`);
             document.getElementById('linkId').value = '';
             document.getElementById('password').value = '';
         }
@@ -70,6 +70,15 @@ function formatBytes(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
 function renderSessions(sessions) {
     const container = document.getElementById('sessionsList');
     container.innerHTML = '';
@@ -82,7 +91,9 @@ function renderSessions(sessions) {
 
     linkIds.forEach(linkId => {
         const session = sessions[linkId];
-        const linkUrl = `${baseTunnelUrl}/t/${linkId}`;
+
+        const localLink = `${localUrl}/t/${linkId}`;
+        const publicLink = publicUrl ? `${publicUrl}/t/${linkId}` : null;
 
         let filesHtml = '';
         const filenames = Object.keys(session.files || {});
@@ -93,11 +104,12 @@ function renderSessions(sessions) {
             filenames.forEach(filename => {
                 const file = session.files[filename];
                 const progress = (file.offset / file.size) * 100 || 0;
+                const safeFilename = escapeHtml(filename);
 
                 filesHtml += `
                     <div class="file-item">
                         <div class="flex-between">
-                            <strong>${filename}</strong>
+                            <strong>${safeFilename}</strong>
                             <span id="status-${linkId}-${filename}" style="font-size: 12px; font-weight: bold; color: ${file.status === 'completed' ? 'green' : (file.status === 'paused' ? 'orange' : 'var(--text)')}">${file.status}</span>
                         </div>
                         <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
@@ -127,8 +139,15 @@ function renderSessions(sessions) {
             <div class="flex-between">
                 <div>
                     <h3 style="margin: 0; margin-bottom: 5px;">ID: ${linkId}</h3>
-                    <a href="${linkUrl}" target="_blank" style="font-size: 14px; color: var(--primary); text-decoration: none;">${linkUrl}</a><br>
-                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">Пароль: <b>${session.password}</b> | Путь: ${session.savePath}</div>
+                    <div style="font-size: 13px; margin-bottom: 5px;">
+                        <b>LAN:</b> <a href="${localLink}" target="_blank" style="color: var(--primary); text-decoration: none;">${localLink}</a>
+                    </div>
+                    ${publicLink ? `
+                    <div style="font-size: 13px;">
+                        <b>WAN:</b> <a href="${publicLink}" target="_blank" style="color: var(--primary); text-decoration: none;">${publicLink}</a>
+                    </div>
+                    ` : ''}
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Пароль: <b>${session.password}</b> | Путь: ${session.savePath}</div>
                 </div>
                 <button class="btn btn-danger" onclick="deleteLink('${linkId}')">Удалить</button>
             </div>

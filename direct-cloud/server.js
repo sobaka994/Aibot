@@ -3,6 +3,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
@@ -45,8 +47,8 @@ adminApp.get('/admin', (req, res) => {
 });
 
 
-server.listen(PUBLIC_PORT, () => {
-    console.log(`[Direct Cloud] Публичный сервер (для загрузок) запущен на http://localhost:${PUBLIC_PORT}`);
+server.listen(PUBLIC_PORT, '0.0.0.0', () => {
+    console.log(`[Direct Cloud] Публичный сервер (для загрузок) запущен и слушает 0.0.0.0:${PUBLIC_PORT}`);
 });
 
 adminServer.listen(ADMIN_PORT, '127.0.0.1', () => {
@@ -54,30 +56,36 @@ adminServer.listen(ADMIN_PORT, '127.0.0.1', () => {
     console.log(`[ВАЖНО] Никогда не открывайте порт ${ADMIN_PORT} для интернета!`);
 });
 
-const localtunnel = require('localtunnel');
-
 // Sessions store: { linkId: { password, savePath, files: {} } }
 const sessions = {};
-let currentTunnelUrl = null;
 
-async function startTunnel(subdomain) {
+// IP Detection logic
+function getLocalIP() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return '127.0.0.1';
+}
+
+let publicIP = 'Определяется...';
+async function fetchPublicIP() {
     try {
-        const tunnel = await localtunnel({ port: PUBLIC_PORT, subdomain: subdomain });
-        currentTunnelUrl = tunnel.url;
-        console.log(`[Direct Cloud] Туннель открыт: ${tunnel.url}`);
-
-        tunnel.on('close', () => {
-            console.log('[Direct Cloud] Туннель закрыт');
-            currentTunnelUrl = null;
-        });
-
-        tunnel.on('error', (err) => {
-            console.error('[Direct Cloud] Ошибка туннеля:', err);
-        });
-    } catch (err) {
-        console.error('[Direct Cloud] Ошибка запуска туннеля:', err);
+        const res = await axios.get('https://api.ipify.org?format=json', { timeout: 3000 });
+        publicIP = res.data.ip;
+        console.log(`[Direct Cloud] Публичный IP определен: ${publicIP}`);
+    } catch (e) {
+        console.log(`[Direct Cloud] Не удалось определить публичный IP: ${e.message}`);
+        publicIP = 'Неизвестен';
     }
 }
+fetchPublicIP();
+
+const localIP = getLocalIP();
 
 io.on('connection', (socket) => {
 
@@ -92,17 +100,19 @@ io.on('connection', (socket) => {
         return true;
     };
 
+    const broadcastAdminSync = () => {
+        io.to('admin').emit('admin_sync', {
+            sessions,
+            localIP,
+            publicIP,
+            port: PUBLIC_PORT
+        });
+    };
+
     socket.on('admin_join', (data) => {
         requireAdmin(data?.token, null, () => {
             socket.join('admin');
-            socket.emit('admin_sync', { sessions, tunnelUrl: currentTunnelUrl || `http://localhost:${PUBLIC_PORT}` });
-        });
-    });
-
-    socket.on('start_tunnel', async (data) => {
-        requireAdmin(data?.token, null, async () => {
-            await startTunnel(data.subdomain);
-            io.to('admin').emit('admin_sync', { sessions, tunnelUrl: currentTunnelUrl || `http://localhost:${PUBLIC_PORT}` });
+            broadcastAdminSync();
         });
     });
 
@@ -121,7 +131,7 @@ io.on('connection', (socket) => {
             };
 
             callback({ success: true, linkId });
-            io.to('admin').emit('admin_sync', { sessions, tunnelUrl: currentTunnelUrl || `http://localhost:${PUBLIC_PORT}` });
+            broadcastAdminSync();
         });
     });
 
@@ -135,7 +145,7 @@ io.on('connection', (socket) => {
                     }
                 });
                 delete sessions[linkId];
-                io.to('admin').emit('admin_sync', { sessions, tunnelUrl: currentTunnelUrl || `http://localhost:${PUBLIC_PORT}` });
+                broadcastAdminSync();
             }
         });
     });
@@ -152,7 +162,7 @@ io.on('connection', (socket) => {
                     if (fileData.fd) { try { fs.closeSync(fileData.fd); } catch(e){} }
                     delete session.files[filename];
                 }
-                io.to('admin').emit('admin_sync', { sessions, tunnelUrl: currentTunnelUrl || `http://localhost:${PUBLIC_PORT}` });
+                broadcastAdminSync();
             }
         });
     });
@@ -196,8 +206,9 @@ io.on('connection', (socket) => {
                 delete session.files[filename];
             }
             callback({ success: true });
-            io.to('admin').emit('admin_sync', { sessions, tunnelUrl: currentTunnelUrl || `http://localhost:${PUBLIC_PORT}` });
-        } else if (action === 'cancel') { // already deleted or doesn't exist
+            broadcastAdminSync();
+        } else {
+            // Файл еще не начал загружаться (новый файл), просто отвечаем успехом
             callback({ success: true });
         }
     });

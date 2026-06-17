@@ -31,13 +31,19 @@
     <div class="container">
         <h1>☁️ Direct Cloud - Панель Хоста</h1>
 
-        <div class="tunnel-info" id="tunnelInfo">
-            <p style="margin-top:0"><strong>Публичный доступ (Localtunnel)</strong></p>
-            <p style="margin-bottom:10px; font-size: 14px; color: var(--text-muted);">Чтобы друзья могли заходить по публичной ссылке, откройте туннель.</p>
-            <div style="display:flex; gap: 10px; align-items: center;">
-                <input type="text" id="subdomain" placeholder="Свой поддомен (опционально)" style="padding:8px; border:1px solid #bfdbfe; border-radius:4px;">
-                <button class="btn btn-success" onclick="startTunnel()">Открыть туннель</button>
-                <span id="currentUrlText" style="font-weight:bold; color:var(--primary); margin-left: 10px;">http://localhost:4000</span>
+        <div class="tunnel-info" id="networkInfo">
+            <p style="margin-top:0; font-size: 18px;"><strong>🌐 Сетевые подключения</strong></p>
+
+            <div style="margin-bottom: 15px;">
+                <p style="margin: 0 0 5px 0; font-weight: 500;">Локальная сеть (Wi-Fi / LAN)</p>
+                <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--text-muted);">Для устройств, подключенных к вашему роутеру.</p>
+                <code style="background: white; padding: 5px 10px; border-radius: 4px; border: 1px solid #bfdbfe; display: block;" id="localIpText">Определяется...</code>
+            </div>
+
+            <div>
+                <p style="margin: 0 0 5px 0; font-weight: 500;">Интернет (Прямое подключение)</p>
+                <p style="margin: 0 0 5px 0; font-size: 13px; color: var(--text-muted);">Для доступа из любой точки мира. <b>Требуется проброс порта на роутере (Port Forwarding).</b></p>
+                <code style="background: white; padding: 5px 10px; border-radius: 4px; border: 1px solid #bfdbfe; display: block;" id="publicIpText">Определяется...</code>
             </div>
         </div>
 
