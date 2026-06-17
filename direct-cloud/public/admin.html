@@ -3,41 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Direct Cloud Admin</title>
-    <link rel="stylesheet" href="/style.css">
+    <title>Direct Cloud Host Panel</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { padding: 20px; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+        :root { --bg: #f9fafb; --panel-bg: #ffffff; --text: #1f2937; --text-muted: #6b7280; --border: #e5e7eb; --primary: #3b82f6; --danger: #ef4444; }
+        body { padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); }
         .container { max-width: 900px; margin: 0 auto; }
-        .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
         .btn { padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; border: none; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-danger { background: var(--danger); color: white; }
         .btn-warning { background: #f59e0b; color: white; }
+        .btn-success { background: #10b981; color: white; }
         .session-item { border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 10px; background: var(--bg); }
         .file-item { margin-top: 10px; padding: 10px; background: var(--panel-bg); border-radius: 4px; border: 1px solid var(--border); }
         .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; margin-top: 10px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
         .controls { margin-top: 10px; display: flex; gap: 10px; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .tunnel-info { padding: 15px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 style="margin-bottom: 20px;">☁️ Direct Cloud - Панель управления</h1>
+        <h1>☁️ Direct Cloud - Панель Хоста</h1>
+
+        <div class="tunnel-info" id="tunnelInfo">
+            <p style="margin-top:0"><strong>Публичный доступ (Localtunnel)</strong></p>
+            <p style="margin-bottom:10px; font-size: 14px; color: var(--text-muted);">Чтобы друзья могли заходить по публичной ссылке, откройте туннель.</p>
+            <div style="display:flex; gap: 10px; align-items: center;">
+                <input type="text" id="subdomain" placeholder="Свой поддомен (опционально)" style="padding:8px; border:1px solid #bfdbfe; border-radius:4px;">
+                <button class="btn btn-success" onclick="startTunnel()">Открыть туннель</button>
+                <span id="currentUrlText" style="font-weight:bold; color:var(--primary); margin-left: 10px;">http://localhost:4000</span>
+            </div>
+        </div>
 
         <div class="card">
             <h2>Создать новую ссылку</h2>
             <div class="form-group">
-                <label>ID Ссылки (оставьте пустым для случайного)</label>
-                <input type="text" id="linkId" placeholder="Например: myfiles">
+                <label>ID Ссылки (для локального URL) / Папка (если пусто, будет случайно)</label>
+                <input type="text" id="linkId" placeholder="Например: dropzone">
             </div>
             <div class="form-group">
-                <label>Пароль для доступа</label>
-                <input type="text" id="password" placeholder="Обязательный пароль">
+                <label>Пароль для доступа (обязательно)</label>
+                <input type="text" id="password" placeholder="Установите пароль">
             </div>
             <div class="form-group">
                 <label>Абсолютный путь для сохранения (на этом ПК)</label>
@@ -54,6 +66,6 @@
         </div>
     </div>
 
-    <script src="/direct-admin.js"></script>
+    <script src="/admin.js"></script>
 </body>
 </html>

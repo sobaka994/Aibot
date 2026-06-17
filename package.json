@@ -13,7 +13,7 @@
   "type": "commonjs",
   "dependencies": {
     "archiver": "^7.0.1",
-    "axios": "^1.18.0",
+    "axios": "^1.16.0",
     "express": "^5.2.1",
     "https-proxy-agent": "^9.0.0",
     "node-telegram-bot-api": "^0.67.0",

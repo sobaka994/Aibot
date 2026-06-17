@@ -1,15 +1,17 @@
-const socket = io('/direct');
+const socket = io();
+let baseTunnelUrl = window.location.origin;
 
 socket.on('connect', () => {
-    socket.emit('admin_join');
+    socket.emit('admin_join', { token: window.ADMIN_TOKEN });
 });
 
-socket.on('admin_sessions_sync', (sessions) => {
-    renderSessions(sessions);
+socket.on('admin_sync', (data) => {
+    baseTunnelUrl = data.tunnelUrl;
+    document.getElementById('currentUrlText').innerText = data.tunnelUrl;
+    renderSessions(data.sessions);
 });
 
 socket.on('transfer_update', (data) => {
-    // Оптимизация: обновляем только прогресс-бар, чтобы не перерисовывать весь DOM каждую секунду
     const progressEl = document.getElementById(`progress-${data.linkId}-${data.filename}`);
     const speedEl = document.getElementById(`speed-${data.linkId}-${data.filename}`);
     const statusEl = document.getElementById(`status-${data.linkId}-${data.filename}`);
@@ -27,25 +29,23 @@ socket.on('transfer_update', (data) => {
     }
 });
 
+function startTunnel() {
+    const sub = document.getElementById('subdomain').value.trim();
+    socket.emit('start_tunnel', { subdomain: sub || undefined, token: window.ADMIN_TOKEN });
+}
+
 function createLink() {
     let linkId = document.getElementById('linkId').value.trim();
     const password = document.getElementById('password').value.trim();
     const savePath = document.getElementById('savePath').value.trim();
 
-    if (!password) {
-        alert('Пароль обязателен!');
-        return;
-    }
+    if (!password) return alert('Пароль обязателен!');
+    if (!linkId) linkId = Math.random().toString(36).substring(2, 8);
 
-    if (!linkId) {
-        linkId = Math.random().toString(36).substring(2, 8);
-    }
-
-    socket.emit('create_link', { linkId, password, savePath }, (response) => {
-        if (response.error) {
-            alert(response.error);
-        } else {
-            alert(`Ссылка создана!\nURL: ${window.location.origin}/direct/${response.linkId}`);
+    socket.emit('create_link', { linkId, password, savePath, token: window.ADMIN_TOKEN }, (response) => {
+        if (response.error) alert(response.error);
+        else {
+            alert(`Ссылка создана!\nURL: ${baseTunnelUrl}/t/${response.linkId}`);
             document.getElementById('linkId').value = '';
             document.getElementById('password').value = '';
         }
@@ -54,12 +54,12 @@ function createLink() {
 
 function deleteLink(linkId) {
     if (confirm('Вы уверены, что хотите удалить эту сессию?')) {
-        socket.emit('delete_link', linkId);
+        socket.emit('delete_link', { linkId, token: window.ADMIN_TOKEN });
     }
 }
 
 function sendAction(action, linkId, filename) {
-    socket.emit('admin_action', { action, linkId, filename });
+    socket.emit('admin_action', { action, linkId, filename, token: window.ADMIN_TOKEN });
 }
 
 function formatBytes(bytes) {
@@ -82,13 +82,13 @@ function renderSessions(sessions) {
 
     linkIds.forEach(linkId => {
         const session = sessions[linkId];
-        const linkUrl = `${window.location.origin}/direct/${linkId}`;
+        const linkUrl = `${baseTunnelUrl}/t/${linkId}`;
 
         let filesHtml = '';
         const filenames = Object.keys(session.files || {});
 
         if (filenames.length === 0) {
-            filesHtml = '<p style="color: #666; font-size: 13px; margin-top: 10px;">Файлы пока не загружаются</p>';
+            filesHtml = '<p style="color: #666; font-size: 13px; margin-top: 10px;">Ожидание загрузки файлов...</p>';
         } else {
             filenames.forEach(filename => {
                 const file = session.files[filename];
@@ -126,9 +126,9 @@ function renderSessions(sessions) {
         sessionEl.innerHTML = `
             <div class="flex-between">
                 <div>
-                    <h3 style="margin: 0;">ID: ${linkId}</h3>
-                    <a href="${linkUrl}" target="_blank" style="font-size: 12px; color: var(--primary); text-decoration: none;">${linkUrl}</a><br>
-                    <span style="font-size: 12px; color: var(--text-muted);">Пароль: ${session.password} | Путь: ${session.savePath}</span>
+                    <h3 style="margin: 0; margin-bottom: 5px;">ID: ${linkId}</h3>
+                    <a href="${linkUrl}" target="_blank" style="font-size: 14px; color: var(--primary); text-decoration: none;">${linkUrl}</a><br>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">Пароль: <b>${session.password}</b> | Путь: ${session.savePath}</div>
                 </div>
                 <button class="btn btn-danger" onclick="deleteLink('${linkId}')">Удалить</button>
             </div>

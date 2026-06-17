@@ -1,6 +1,13 @@
-const socket = io('/direct');
+const socket = io();
 const linkId = window.location.pathname.split('/').pop();
 let currentPassword = '';
+
+let selectedFile = null;
+let uploadPaused = false;
+let uploadCancelled = false;
+let currentOffset = 0;
+const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+let startTime = 0;
 
 function verifyPassword() {
     const pwd = document.getElementById('passwordInput').value.trim();
@@ -16,13 +23,6 @@ function verifyPassword() {
         }
     });
 }
-
-let selectedFile = null;
-let uploadPaused = false;
-let uploadCancelled = false;
-let currentOffset = 0;
-const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
-let startTime = 0;
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -41,7 +41,6 @@ function handleFileSelect(event) {
     document.getElementById('uploadControls').classList.remove('hidden');
     document.getElementById('uploadSize').innerText = `0 / ${formatBytes(file.size)}`;
 
-    // Сброс состояния
     currentOffset = 0;
     uploadPaused = false;
     uploadCancelled = false;
@@ -58,7 +57,8 @@ function updateUI(state) {
         btnStart.classList.remove('hidden');
         btnPause.classList.add('hidden');
         btnCancel.classList.add('hidden');
-        statusText.innerText = 'Готов к загрузке';
+        statusText.innerText = 'Готов к отправке';
+        statusText.style.color = 'var(--text)';
         document.getElementById('uploadProgress').style.width = '0%';
         document.getElementById('uploadPercent').innerText = '0%';
     } else if (state === 'uploading') {
@@ -66,16 +66,18 @@ function updateUI(state) {
         btnPause.classList.remove('hidden');
         btnPause.innerText = 'Пауза';
         btnCancel.classList.remove('hidden');
-        statusText.innerText = 'Идет загрузка...';
+        statusText.innerText = 'Отправка...';
+        statusText.style.color = 'var(--primary)';
     } else if (state === 'paused') {
         btnPause.innerText = 'Возобновить';
         statusText.innerText = 'На паузе';
+        statusText.style.color = '#f59e0b';
     } else if (state === 'completed') {
         btnStart.classList.add('hidden');
         btnPause.classList.add('hidden');
         btnCancel.classList.add('hidden');
-        statusText.innerText = 'Загрузка завершена!';
-        statusText.style.color = 'green';
+        statusText.innerText = 'Файл успешно отправлен на ПК!';
+        statusText.style.color = '#10b981';
         document.getElementById('uploadProgress').style.width = '100%';
         document.getElementById('uploadPercent').innerText = '100%';
     }
@@ -108,7 +110,7 @@ function readAndSendChunk() {
                     currentOffset = res.expectedOffset;
                     readAndSendChunk();
                 } else if (res.error === 'Загрузка на паузе') {
-                    // Ждем
+                    // Waiting
                 } else {
                     alert('Ошибка: ' + res.error);
                 }
@@ -122,7 +124,6 @@ function readAndSendChunk() {
 
             currentOffset = res.nextOffset;
 
-            // Обновляем статистику
             const progress = (currentOffset / selectedFile.size) * 100;
             document.getElementById('uploadProgress').style.width = `${progress}%`;
             document.getElementById('uploadPercent').innerText = `${progress.toFixed(1)}%`;
@@ -134,7 +135,6 @@ function readAndSendChunk() {
                 document.getElementById('uploadSpeed').innerText = `${formatBytes(speed)}/s`;
             }
 
-            // Следующий чанк
             readAndSendChunk();
         });
     };
@@ -144,7 +144,6 @@ function readAndSendChunk() {
 function startUpload() {
     if (!selectedFile) return;
 
-    // Спрашиваем сервер, есть ли уже этот файл (чтобы продолжить)
     socket.emit('get_offset', { linkId, password: currentPassword, filename: selectedFile.name }, (res) => {
         if (res.error) {
             alert(res.error);
@@ -152,7 +151,7 @@ function startUpload() {
         }
 
         currentOffset = res.offset || 0;
-        startTime = Date.now() - (currentOffset / (1024*1024)); // Приблизительная корректировка времени
+        startTime = Date.now() - (currentOffset / (1024*1024));
         uploadPaused = false;
         uploadCancelled = false;
 
@@ -190,7 +189,6 @@ function cancelUpload() {
     }
 }
 
-// Drag and drop events
 const dropZone = document.getElementById('fileDropZone');
 
 dropZone.addEventListener('dragover', (e) => {
@@ -213,10 +211,9 @@ dropZone.addEventListener('drop', (e) => {
     }
 });
 
-// Auto-resume on reconnect
 socket.on('connect', () => {
     if (selectedFile && currentPassword && !uploadPaused && !uploadCancelled) {
-        console.log('Переподключение, попытка возобновить загрузку...');
+        console.log('Переподключение, попытка возобновить...');
         startUpload();
     }
 });
@@ -225,5 +222,6 @@ socket.on('disconnect', () => {
     if (selectedFile && !uploadPaused && !uploadCancelled && currentOffset < selectedFile.size) {
         console.log('Соединение разорвано. Ожидание восстановления...');
         document.getElementById('uploadStatus').innerText = 'Переподключение...';
+        document.getElementById('uploadStatus').style.color = '#ef4444';
     }
 });
