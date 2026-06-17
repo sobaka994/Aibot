@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Cloud Admin</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { padding: 20px; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+        .btn { padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; border: none; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .session-item { border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 10px; background: var(--bg); }
+        .file-item { margin-top: 10px; padding: 10px; background: var(--panel-bg); border-radius: 4px; border: 1px solid var(--border); }
+        .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; margin-top: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+        .controls { margin-top: 10px; display: flex; gap: 10px; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="margin-bottom: 20px;">☁️ Direct Cloud - Панель управления</h1>
+
+        <div class="card">
+            <h2>Создать новую ссылку</h2>
+            <div class="form-group">
+                <label>ID Ссылки (оставьте пустым для случайного)</label>
+                <input type="text" id="linkId" placeholder="Например: myfiles">
+            </div>
+            <div class="form-group">
+                <label>Пароль для доступа</label>
+                <input type="text" id="password" placeholder="Обязательный пароль">
+            </div>
+            <div class="form-group">
+                <label>Абсолютный путь для сохранения (на этом ПК)</label>
+                <input type="text" id="savePath" placeholder="C:\Users\Name\Downloads\MyFolder">
+            </div>
+            <button class="btn btn-primary" onclick="createLink()">Создать ссылку</button>
+        </div>
+
+        <div class="card">
+            <h2>Активные сессии</h2>
+            <div id="sessionsList">
+                <p style="color: var(--text-muted)">Нет активных сессий</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/direct-admin.js"></script>
+</body>
+</html>

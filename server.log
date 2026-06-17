@@ -1,0 +1,30 @@
+[SYSTEM] Сервер Media Hub инициализирован.
+
+[SYSTEM] Проверка наличия yt-dlp...
+[SYSTEM] yt-dlp найден.
+
+[SYSTEM] Проверка наличия FFmpeg и FFprobe...
+[SYSTEM] Зависимости не найдены. Начинаю автоматическую загрузку FFmpeg (это займет время)...
+/bin/sh: 1: powershell: not found
+/bin/sh: 9: Write-Host: not found
+/bin/sh: 10: Remove-Item: not found
+/bin/sh: 11: Syntax error: Unterminated quoted string
+[ERROR] Сбой при установке FFmpeg: Command failed: powershell -NoProfile -Command "
+            $ErrorActionPreference = 'Stop'
+            Write-Host "[DOWNLOAD] Скачивание архива FFmpeg с официального зеркала..."
+            Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile "ffmpeg.zip" -UseBasicParsing
+            Write-Host "[EXTRACT] Распаковка архива..."
+            Expand-Archive -Path "ffmpeg.zip" -DestinationPath "ffmpeg_temp" -Force
+            Write-Host "[INSTALL] Перемещение бинарных файлов в корень проекта..."
+            Move-Item -Path "ffmpeg_temp\*\bin\*.exe" -Destination ".\" -Force
+            Write-Host "[CLEANUP] Очистка временных файлов установки..."
+            Remove-Item "ffmpeg.zip", "ffmpeg_temp" -Recurse -Force
+        "
+/bin/sh: 1: powershell: not found
+/bin/sh: 9: Write-Host: not found
+/bin/sh: 10: Remove-Item: not found
+/bin/sh: 11: Syntax error: Unterminated quoted string
+
+[SYSTEM] Инструменты сложной обработки видео (Content Pack, SponsorBlock) будут отключены. Сервер продолжает работу.
+
+[SYSTEM] Сервер запущен на http://localhost:3000

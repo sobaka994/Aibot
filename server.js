@@ -35,6 +35,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const utils = require('./utils');
 const ytDlpName = process.platform === 'win32' ? 'yt-dlp.exe' : (process.platform === 'darwin' ? 'yt-dlp_macos' : 'yt-dlp');
+const { initDirectTransfer } = require('./directTransferServer');
 const ytDlpPath = path.join(__dirname, ytDlpName);
 
 // Подключение изолированных парсеров по платформам
@@ -267,6 +268,13 @@ function processQueue() {
 
 // --- API МАРШРУТЫ (HTTP) ---
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+// --- МАРШРУТЫ DIRECT TRANSFER ---
+app.get('/direct-admin', (req, res) => res.sendFile(path.join(__dirname, 'direct-admin.html')));
+app.get('/direct/:linkId', (req, res) => res.sendFile(path.join(__dirname, 'direct-client.html')));
+app.get('/direct-client.js', (req, res) => res.sendFile(path.join(__dirname, 'direct-client.js')));
+app.get('/direct-admin.js', (req, res) => res.sendFile(path.join(__dirname, 'direct-admin.js')));
+
 app.get('/api/blacklist', (req, res) => {
     res.json(utils.getBlacklist());
 });
@@ -631,7 +639,7 @@ io.on('connection', (socket) => {
 
 const PORT = 3000;
 
-
+initDirectTransfer(app, io, express);
 
 utils.checkAndDownloadBinaries().then(() => {
     server.listen(PORT, () => {
