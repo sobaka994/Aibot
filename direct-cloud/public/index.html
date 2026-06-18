@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Cloud Upload</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root { --bg: #f9fafb; --panel-bg: #ffffff; --text: #1f2937; --text-muted: #6b7280; --border: #e5e7eb; --primary: #3b82f6; --danger: #ef4444; }
+        body { padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { max-width: 500px; width: 100%; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .text-center { text-align: center; }
+        .form-group { margin-bottom: 20px; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        .btn { width: 100%; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; border: none; font-size: 16px; margin-bottom: 10px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .hidden { display: none !important; }
+        .progress-container { margin-top: 20px; margin-bottom: 20px; }
+        .progress-bar { width: 100%; height: 12px; background: #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+        .stats { font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 15px; }
+        #fileInput { display: none; }
+        .file-label { display: block; border: 2px dashed var(--border); padding: 40px 20px; text-align: center; cursor: pointer; border-radius: 8px; margin-bottom: 20px; transition: border-color 0.3s; }
+        .file-label:hover { border-color: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="container" id="authSection">
+        <h2 class="text-center">☁️ Direct Cloud</h2>
+        <p class="text-center" style="color: var(--text-muted); margin-bottom: 20px;">Введите пароль для безопасной передачи файлов на устройство хоста.</p>
+        <div class="form-group">
+            <input type="password" id="passwordInput" placeholder="Пароль доступа">
+        </div>
+        <button class="btn btn-primary" onclick="verifyPassword()">Подключиться</button>
+        <div id="authError" style="color: var(--danger); text-align: center; margin-top: 10px; font-size: 14px;"></div>
+    </div>
+
+    <div class="container hidden" id="uploadSection">
+        <h2 class="text-center">☁️ Загрузка файлов</h2>
+
+        <label class="file-label" id="fileDropZone">
+            <span id="fileNameDisplay" style="font-size: 18px; font-weight: 500;">Нажмите или перетащите файл сюда</span>
+            <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+        </label>
+
+        <div id="uploadControls" class="hidden">
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="uploadProgress"></div>
+                </div>
+                <div class="stats">
+                    <span id="uploadPercent">0%</span>
+                    <span id="uploadSpeed">0 MB/s</span>
+                </div>
+                <div class="stats" style="margin-top: -5px;">
+                    <span id="uploadSize">0 / 0 MB</span>
+                    <span id="uploadStatus" style="font-weight: 500;">Готов к загрузке</span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="btnStart" onclick="startUpload()">Начать отправку</button>
+            <button class="btn btn-warning hidden" id="btnPause" onclick="togglePause()">Пауза</button>
+            <button class="btn btn-danger hidden" id="btnCancel" onclick="cancelUpload()">Отменить</button>
+        </div>
+    </div>
+
+    <script src="/client.js"></script>
+</body>
+</html>
