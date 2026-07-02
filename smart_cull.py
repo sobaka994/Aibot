@@ -122,31 +122,31 @@ def group_similar_images(results, hash_threshold=10):
     return groups
 
 def main():
-    parser = argparse.ArgumentParser(description="Smart Cull: Automatically analyze and cull photos.")
-    parser.add_argument("directory", help="Path to the directory containing images to analyze.")
-    parser.add_argument("--output", default="cull_results.csv", help="Output CSV filename.")
+    parser = argparse.ArgumentParser(description="Smart Cull: Автоматический анализ и отбор фотографий.")
+    parser.add_argument("directory", help="Путь к директории с изображениями для анализа.")
+    parser.add_argument("--output", default="cull_results.csv", help="Имя выходного CSV файла.")
 
     args = parser.parse_args()
 
     if not os.path.isdir(args.directory):
-        print(f"Error: {args.directory} is not a valid directory.")
+        print(f"Ошибка: {args.directory} не является директорией.")
         return
 
     supported_extensions = ('.jpg', '.jpeg', '.png')
     results = []
 
-    print(f"Scanning directory: {args.directory}")
+    print(f"Сканирование директории: {args.directory}")
     for filename in os.listdir(args.directory):
         if filename.lower().endswith(supported_extensions):
             filepath = os.path.join(args.directory, filename)
             result = evaluate_image(filepath)
             if result:
                 results.append(result)
-                print(f"Analyzed {filename}: Blur={result['blur_score']:.2f}, Faces={result['num_faces']}, ClosedEyes={result['closed_eyes']}")
+                print(f"Проанализирован {filename}: Резкость={result['blur_score']:.2f}, Лица={result['num_faces']}, Закрытые глаза={result['closed_eyes']}")
 
     # Group similar images
     groups = group_similar_images(results)
-    print(f"\nFound {len(groups)} unique groups/bursts.")
+    print(f"\nНайдено {len(groups)} уникальных групп/серий кадров.")
 
     final_cull = []
     for group in groups:
@@ -195,7 +195,7 @@ def main():
         for item in final_cull:
             writer.writerow([item['filename'], item['rating'], item['color']])
 
-    print(f"\nResults saved to {args.output}")
+    print(f"\nРезультаты сохранены в {args.output}")
 
 if __name__ == "__main__":
     main()

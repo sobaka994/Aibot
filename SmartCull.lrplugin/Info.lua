@@ -7,14 +7,14 @@ return {
 
 	LrExportMenuItems = {
 		{
-			title = "Import Smart Cull Results...",
+			title = "Импорт результатов Smart Cull...",
 			file = "ApplyCull.lua",
 		},
 	},
 
     LrLibraryMenuItems = {
 		{
-			title = "Import Smart Cull Results...",
+			title = "Импорт результатов Smart Cull...",
 			file = "ApplyCull.lua",
 		},
 	},

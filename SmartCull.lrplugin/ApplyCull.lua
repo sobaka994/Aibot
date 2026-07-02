@@ -44,7 +44,7 @@ end
 local function applyCull()
     LrTasks.startAsyncTask(function()
         local csvPath = LrDialogs.runOpenPanel({
-            title = "Select Smart Cull CSV Results",
+            title = "Выберите CSV файл с результатами Smart Cull",
             canChooseFiles = true,
             canChooseDirectories = false,
             allowsMultipleSelection = false,
@@ -57,7 +57,7 @@ local function applyCull()
 
         local cullData, err = processCSV(csvPath[1])
         if not cullData then
-            LrDialogs.message("Error reading CSV", err, "critical")
+            LrDialogs.message("Ошибка чтения CSV", err, "critical")
             return
         end
 
@@ -65,7 +65,7 @@ local function applyCull()
         local targetPhotos = catalog:getTargetPhotos()
 
         if #targetPhotos == 0 then
-            LrDialogs.message("No Photos Selected", "Please select the photos you want to apply culling results to in the Grid view.", "info")
+            LrDialogs.message("Фотографии не выбраны", "Пожалуйста, выделите фотографии, к которым нужно применить результаты отбора, в режиме Сетки (Grid view).", "info")
             return
         end
 
@@ -103,7 +103,7 @@ local function applyCull()
             end
         end)
 
-        LrDialogs.message("Smart Cull Applied", string.format("Applied ratings and labels to %d photos.", matchedCount), "info")
+        LrDialogs.message("Smart Cull: Готово", string.format("Рейтинги и метки успешно применены к %d фото.", matchedCount), "info")
     end)
 end
 
