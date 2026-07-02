@@ -51,11 +51,11 @@ local function applyCull()
             fileTypes = { "csv" }
         })
 
-        if not csvPath or #csvPath == 0 then
+        if not csvPath or string.len(csvPath) == 0 then
             return
         end
 
-        local cullData, err = processCSV(csvPath[1])
+        local cullData, err = processCSV(csvPath)
         if not cullData then
             LrDialogs.message("Ошибка чтения CSV", err, "critical")
             return
