@@ -18,6 +18,7 @@
    crs:Version="15.0"
    crs:ProcessVersion="11.0"
    crs:PerspectiveUpright="1"
+   crs:CropConstrainToWarp="1"
    crs:AutoLateralCA="1"
    crs:LensProfileEnable="1"
    crs:LensProfileSetup="LensDefaults"
