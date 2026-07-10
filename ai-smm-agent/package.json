@@ -1,0 +1,32 @@
+{
+  "name": "ai-smm-agent",
+  "version": "1.0.0",
+  "description": "AI SMM Agent Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "test": "echo \"No test specified\" && exit 0"
+  },
+  "build": {
+    "appId": "com.ai.smmagent",
+    "productName": "AI SMM Agent",
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.18.1",
+    "electron-store": "^11.0.2",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3"
+  }
+}
