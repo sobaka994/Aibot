@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>AI SMM Агент</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="sidebar">
+    <h2>AI SMM Агент</h2>
+    <ul class="tabs">
+      <li class="tab-link active" data-tab="tab-dashboard">Дашборд</li>
+      <li class="tab-link" data-tab="tab-pipeline">Настройки конвейера</li>
+      <li class="tab-link" data-tab="tab-ai">Настройки ИИ</li>
+      <li class="tab-link" data-tab="tab-prompts">Промпты и Теги</li>
+      <li class="tab-link" data-tab="tab-social">Соцсети</li>
+    </ul>
+  </div>
+
+  <div class="content">
+    <div id="tab-dashboard" class="tab-content active">
+      <h2>Дашборд</h2>
+      <div class="card">
+        <h3>Управление</h3>
+        <button id="btn-start-pipeline">Запустить сейчас</button>
+        <button id="btn-toggle-timer">Включить автозапуск</button>
+        <p>Статус: <span id="pipeline-status">Ожидание...</span></p>
+      </div>
+      <div class="card log-container">
+        <h3>Лог работы</h3>
+        <pre id="app-logs"></pre>
+      </div>
+    </div>
+
+    <div id="tab-pipeline" class="tab-content">
+      <h2>Настройки конвейера</h2>
+      <div class="card">
+        <label for="search-query">Запрос для поиска новостей:</label>
+        <input type="text" id="search-query" placeholder="Например: Искусственный интеллект технологии">
+
+        <label for="timer-interval">Интервал автозапуска (минут):</label>
+        <input type="number" id="timer-interval" value="60" min="1">
+
+        <button id="btn-save-pipeline">Сохранить</button>
+      </div>
+    </div>
+
+    <div id="tab-ai" class="tab-content">
+      <h2>Настройки ИИ API</h2>
+      <div class="card">
+        <p>Настройте провайдеров для каждого модуля конвейера.</p>
+        <div class="module-setting">
+          <label>Модуль: Поиск и фильтрация</label>
+          <select id="ai-module-search">
+            <option value="chatgpt">ChatGPT</option>
+            <option value="claude">Claude</option>
+            <option value="gemini">Gemini</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="qwen">Qwen</option>
+            <option value="perplexity">Perplexity</option>
+          </select>
+        </div>
+
+        <div class="module-setting">
+          <label>Модуль: Копирайтер (Статья)</label>
+          <select id="ai-module-writer">
+            <option value="chatgpt">ChatGPT</option>
+            <option value="claude">Claude</option>
+            <option value="gemini">Gemini</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="qwen">Qwen</option>
+          </select>
+        </div>
+
+        <div class="module-setting">
+          <label>Модуль: Оценка качества</label>
+          <select id="ai-module-evaluator">
+            <option value="chatgpt">ChatGPT</option>
+            <option value="claude">Claude</option>
+            <option value="gemini">Gemini</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="qwen">Qwen</option>
+          </select>
+        </div>
+
+        <hr>
+
+        <h3>Ключи API (API Keys)</h3>
+        <div class="api-keys-grid">
+          <div><label>ChatGPT:</label><input type="password" id="api-chatgpt"></div>
+          <div><label>Claude:</label><input type="password" id="api-claude"></div>
+          <div><label>Gemini:</label><input type="password" id="api-gemini"></div>
+          <div><label>DeepSeek:</label><input type="password" id="api-deepseek"></div>
+          <div><label>Qwen:</label><input type="password" id="api-qwen"></div>
+          <div><label>Perplexity:</label><input type="password" id="api-perplexity"></div>
+        </div>
+        <button id="btn-save-ai">Сохранить настройки ИИ</button>
+      </div>
+    </div>
+
+    <div id="tab-prompts" class="tab-content">
+      <h2>Промпты и Теги</h2>
+      <div class="card">
+        <h3>Теги фильтрации новостей</h3>
+        <input type="text" id="new-tag" placeholder="Новый тег (например: актуальность)">
+        <button id="btn-add-tag">Добавить</button>
+        <div id="tags-container" class="tags-container"></div>
+
+        <hr>
+
+        <h3>Универсальный промпт</h3>
+        <p><small>Базовый промпт вшит в код. Здесь можно добавить дополнительные инструкции.</small></p>
+        <textarea id="universal-prompt" rows="5" placeholder="Дополнительные инструкции для ИИ..."></textarea>
+        <button id="btn-save-prompts">Сохранить</button>
+      </div>
+    </div>
+
+    <div id="tab-social" class="tab-content">
+      <h2>Соцсети</h2>
+      <div class="card">
+        <h3>Telegram</h3>
+        <label>Bot Token:</label><input type="text" id="tg-token">
+        <label>Channel ID (например @mychannel):</label><input type="text" id="tg-channel">
+
+        <hr>
+
+        <h3>VK (Группа)</h3>
+        <label>Access Token:</label><input type="text" id="vk-token">
+        <label>Group ID (с минусом, если требуется):</label><input type="text" id="vk-group">
+
+        <hr>
+
+        <h3>Instagram (Авторизация через браузер)</h3>
+        <p>Использует мини-браузер для сохранения сессии.</p>
+        <button id="btn-auth-instagram">Авторизоваться в Instagram</button>
+        <p>Статус: <span id="insta-status">Не авторизован</span></p>
+
+        <br><br>
+        <button id="btn-save-social">Сохранить настройки соцсетей</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
