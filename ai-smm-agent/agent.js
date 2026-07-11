@@ -286,11 +286,20 @@ ${postText}
     if (!cookies || cookies.length === 0) {
       throw new Error("Нет сохраненной сессии Instagram. Пожалуйста, авторизуйтесь.");
     }
-    // Автопубликация в Instagram через веб-версию (эмуляция браузера)
-    // требует сложных библиотек типа puppeteer/playwright, так как API закрыто.
-    // В рамках агента мы просто логируем попытку, если есть куки.
-    console.log("Cookies найдены:", cookies.length);
-    return { success: true, message: "Эмуляция публикации в Instagram (заглушка)." };
+
+    // Вызываем IPC метод главного процесса, который откроет скрытое окно браузера
+    // и выполнит публикацию поста от имени пользователя с сохраненной сессией
+    const { ipcRenderer } = require('electron');
+    try {
+      const result = await ipcRenderer.invoke('publish-instagram-post', { text, imageUrl });
+      if (!result.success) {
+         throw new Error(result.error);
+      }
+      return result;
+    } catch (e) {
+      console.error("Ошибка публикации в Instagram:", e);
+      throw e;
+    }
   }
 }
 
